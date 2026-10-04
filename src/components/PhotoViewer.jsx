@@ -30,20 +30,31 @@ export function PhotoViewer({
   onDeleteNote
 }) {
   const [isEditingNote, setIsEditingNote] = useState(false);
+  const [showToastPill, setShowToastPill] = useState(true);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [isStarred, setIsStarred] = useState(false);
   const [copiedShare, setCopiedShare] = useState(false);
 
   // Current photo index in gallery for prev/next navigation
   const currentIndex = allPhotos.findIndex(p => p.id === photo?.id);
-  const hasPrev = currentIndex > 0;
-  const hasNext = currentIndex !== -1 && currentIndex < allPhotos.length - 1;
 
   const currentDisplayNote = photo
     ? (photo.user_note !== null && photo.user_note !== undefined ? photo.user_note : photo.memory_note)
     : '';
 
   const hasNote = currentDisplayNote && currentDisplayNote.trim().length > 0;
+
+  // Auto-dismiss note discovery toast pill after 1.8 seconds if user doesn't interact
+  useEffect(() => {
+    setShowToastPill(true);
+    setIsEditingNote(false);
+
+    const timer = setTimeout(() => {
+      setShowToastPill(false);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, [photo?.id]);
 
   // Keyboard navigation shortcuts
   useEffect(() => {
@@ -55,6 +66,7 @@ export function PhotoViewer({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
 
   if (!photo) return null;
 
@@ -127,22 +139,23 @@ export function PhotoViewer({
             className="viewer-main-img"
           />
 
-          {/* Floating Memory Note Section directly above action bar */}
-          <div className="viewer-floating-note-bar">
+          {/* Floating Memory Note Section below photo image */}
+          <div className={`viewer-floating-note-bar ${!hasNote && !isEditingNote && !showToastPill ? 'pill-hidden' : 'pill-visible'}`}>
             {hasNote && !isEditingNote ? (
               <SavedNoteBadge
                 noteText={currentDisplayNote}
                 onEdit={() => setIsEditingNote(true)}
                 onDelete={handleDelete}
               />
-            ) : (
+            ) : (isEditingNote || showToastPill) ? (
               <QuickNoteInput
                 initialValue={currentDisplayNote}
                 onSaveNote={handleSave}
                 onCancel={() => setIsEditingNote(false)}
               />
-            )}
+            ) : null}
           </div>
+
         </div>
 
         {/* Info Side Drawer on larger viewports or modal toggle */}
